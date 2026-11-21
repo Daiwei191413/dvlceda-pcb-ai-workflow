@@ -1,0 +1,38 @@
+name: Verify public skill
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+env:
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-22.04, python-version: '3.8'}
+          - {os: ubuntu-latest, python-version: '3.11'}
+          - {os: ubuntu-latest, python-version: '3.13'}
+          - {os: windows-latest, python-version: '3.8'}
+          - {os: windows-latest, python-version: '3.11'}
+          - {os: windows-latest, python-version: '3.13'}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check reproducible synthetic fixtures
+        run: python tools/make_fixtures.py --check
+      - name: Check Agent Skills structure
+        run: python tools/validate_skill.py .
+      - name: Offline security signatures
+        run: python tools/privacy_scan.py .
+      - name: Offline regression suite
+        run: python -B tests/run_tests.py
+      - name: Read-only geometry audit regression suite
+        run: python -B tests/test_geometry_audit.py
+      - name: Schematic project-spec regression suite
+        run: python -B tests/test_schematic_spec_check.py
